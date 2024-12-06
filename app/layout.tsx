@@ -3,6 +3,7 @@ import StoreProvider from "@/app/store/provider";
 import localFont from "next/font/local";
 import "./globals.css";
 
+
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
