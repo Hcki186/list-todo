@@ -1,83 +1,103 @@
 'use client';
-import React, { useState } from 'react';
-import { TodoList } from '@/app/types/TodoList';
-import { EllipsisHorizontalIcon } from '@heroicons/react/24/solid';
-import { deleteTodoItem, updateTodoItem } from '@/app/services/todoApi';
-interface TodoListDetailProps {
-  todoList: TodoList;
-}
+
+import React, { useState, useEffect } from 'react';
+import SearchBar from './SearchBar';
+import TodoItem from './TodoItem';
+import AddTaskModal from '@/app/components/AddTaskModal';
+import { deleteTodoItem, updateTodoItem, createTodoItem, fetchFilteredItemsByListId } from '@/app/services/todoApi';
+import { TodoItem as TodoItemType } from '@/app/types/TodoItem';
+import { TodoItemForm } from '@/app/types/schemas/todoSchemas';
+import { PlusCircleIcon } from '@heroicons/react/24/solid';
+import { TodoListDetailProps } from '@/app/types/TodoListDetailProps';
+
 const TodoListDetail = ({ todoList }: TodoListDetailProps) => {
-  const [items, setItems] = useState(todoList.items);
-  const handleDeleteItem = async (itemId: string) => {
+  const [items, setItems] = useState<TodoItemType[]>(todoList.items);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState<'All' | 'Active' | 'Done'>('All');
+  const [isModalOpen, setModalOpen] = useState(false);
+
+  const fetchItems = async () => {
     try {
-      await deleteTodoItem(todoList.id, itemId);
-      setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+      const filteredItems = await fetchFilteredItemsByListId(todoList.id, searchTerm, filter);
+      setItems(filteredItems);
     } catch (error) {
-      console.error('Error deleting item:', error);
+      console.error('Error fetching filtered items:', error);
+      setItems([]);
     }
   };
+
+  useEffect(() => {
+    fetchItems();
+  }, [searchTerm, filter]);
+
+  const handleDeleteItem = async (itemId: string) => {
+    const confirmDelete = confirm("Are you sure you want to delete this Todo item?");
+    if (confirmDelete) {
+      try {
+        await deleteTodoItem(todoList.id, itemId);
+        setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+      } catch (error) {
+        console.error('Error deleting item:', error);
+      }
+    }
+  };
+
   const handleCheckboxChange = async (itemId: string, completed: boolean) => {
     try {
       await updateTodoItem(todoList.id, itemId, completed);
       setItems(prevItems =>
-        prevItems.map(item =>
-          item.id === itemId ? { ...item, completed } : item
-        )
+        prevItems.map(item => item.id === itemId ? { ...item, completed } : item)
       );
     } catch (error) {
       console.error('Error updating item:', error);
     }
   };
+
+  const handleAddItem = async (data: TodoItemForm) => {
+    try {
+      const newItem = await createTodoItem(todoList.id, data);
+      setItems(prevItems => [...prevItems, newItem]);
+      setModalOpen(false);
+    } catch (error) {
+      console.error('Error creating item:', error);
+    }
+  };
+
   return (
     <div>
-      <h1 className="card-title">{todoList.title}</h1>
+      <SearchBar
+        searchTerm={searchTerm}
+        filter={filter}
+        onSearchChange={setSearchTerm}
+        onFilterChange={setFilter}
+      />
+      <h1 className="card-title text-3xl text-todo-main mb-5">{todoList.title}</h1>
       <div className="mt-4">
         {items.length > 0 ? (
           <ul className="space-y-4">
             {items.map((item) => (
-              <li key={item.id} className="navbar border border-300 rounded-box">
-                <div className="flex-1 px-2 lg:flex-none">
-                  <div className="flex-1 px-2 lg:flex-none">
-                    <h2 className="text-lg font-bold">{item.title}</h2>
-                    <p>{item.description}</p>
-                    <p>Deadline: {new Date(item.deadline).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <div className="flex flex-1 justify-end px-2">
-                  <div className="flex items-stretch">
-                    <div className="form-control">
-                      <label className="cursor-pointer label">
-                        <span className="label-text mr-2">Done</span>
-                        <input
-                          type="checkbox"
-                          checked={item.completed}
-                          onChange={(e) => handleCheckboxChange(item.id, e.target.checked)}
-                          className="checkbox checkbox-error"
-                        />
-                      </label>
-                    </div>
-                    <div className="dropdown dropdown-end">
-                      <div tabIndex={0} role="button" className="btn btn-ghost rounded-btn">
-                        <EllipsisHorizontalIcon className="h-5 w-5 text-grey-500" />
-                      </div>
-                      <ul
-                        tabIndex={0}
-                        className="menu dropdown-content bg-base-100 rounded-box z-[1] mt-4 w-52 p-2 shadow">
-                        <li>
-                          <a onClick={() => handleDeleteItem(item.id)} className="text-red-500">Delete</a>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </li>
+              <TodoItem
+                key={item.id}
+                item={item}
+                onDelete={handleDeleteItem}
+                onCheckboxChange={handleCheckboxChange}
+              />
             ))}
           </ul>
         ) : (
           <p>No records</p>
         )}
       </div>
+      <button className="btn btn-link no-underline hover:no-underline text-todo-main" onClick={() => setModalOpen(true)}>
+        <PlusCircleIcon className="h-5 w-5 text-todo-main" />Add task
+      </button>
+      <AddTaskModal
+        isOpen={isModalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleAddItem}
+      />
     </div>
   );
 };
+
 export default TodoListDetail;
