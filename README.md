@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Live Demo
+Is only working on pc in this moment
+Link : https://list-todo-one.vercel.app/
 
 ## Getting Started
 
