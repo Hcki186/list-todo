@@ -11,7 +11,6 @@ export const todoItemSchema = z.object({
 
 export type TodoItemForm = z.infer<typeof todoItemSchema>;
 
-
 export const todoListSchema = z.object({
   title: z.string().min(1, 'Title is required'),
 });
